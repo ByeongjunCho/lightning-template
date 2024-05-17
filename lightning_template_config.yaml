@@ -1,0 +1,76 @@
+# lightning module template configuration
+
+path:
+  save_path: ./ckpt
+  # resume: /Users/byeongjuncho/PythonProject/etc/template/dummy/None/dummy/2024-04-12-18-49-47-batchsize-16-lr-1e-4-seed-42
+  resume: null
+
+train_parameters:  
+  batch_size: 16
+  lr: 1e-4
+  class_num: 10
+
+trainer:
+  callback:
+    ModelCheckpoint:
+      save_top_k: -1
+      save_last: True
+      save_weights_only: False
+      every_n_epochs: 1
+
+    LearningRateMonitor:
+      logging_interval: step
+      log_momentum: True
+  
+    EarlyStopping:
+      monitor: 'val_loss'
+      min_delta: 0
+      patience: 20
+      verbose: False
+      mode: 'min'
+
+  logger:
+    WandbLogger:
+      project: dummy
+      name: dummy
+      version: null
+      log_model: False
+      group: null
+      resume: null       # must if you resume
+      id: null         # if resume is not None, id is same as wandb 
+
+    TensorBoardLogger:
+      log_graph: True
+
+    wandblogger_watch:
+      log: all
+      log_freq: 100
+      log_graph: False
+
+  init:
+    accelerator: mps # cpu, gpu, tpu, mps, ...
+    accumulate_grad_batches: 1
+    check_val_every_n_epoch: 1 # train 몇번 끝나고 validation 할지 주기
+    devices: [0]
+    # enable_checkpointing: True # 마지막 checkpoint 를 언제나 저장함
+    fast_dev_run: False # 1 train, valid, test 수행. debugging 에서 사용
+    gradient_clip_val : null # gradient clip value
+    limit_train_batches: 0.2 # 데이터 제한(%)
+    limit_test_batches: 0.2
+    limit_val_batches: 0.2
+    log_every_n_steps: 50 # logging 주기(step)
+    max_epochs: 10 # stop epoch 
+    max_steps: -1 # stop step
+    num_nodes: 1
+    num_sanity_val_steps: 2 # 학습 전 validation step 을 얼마나 실행할지 선택(batch)
+    precision: 16-mixed # 32-true, 32, 16-mixed, bf16-mixed, ...
+    profiler: null # 실행 시 내부를 profile로 보여줌. "simple", "advanced", ...
+    val_check_interval: 1.0 # validation 을 어어느 주기로 수행할 것인지 여부. [0.0, 1.0] = training epcoh %, int=batch
+    # strategy: null # ddp, fsdp, ...
+    detect_anomaly: true
+  
+  fit:
+    ckpt_path: null
+
+etc:
+  seed: 42
