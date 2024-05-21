@@ -57,6 +57,16 @@ class TemplateLightningModule(L.LightningModule):
             "interval": "epoch",
             "frequency": 1,
         }
+        # import bitsandbytes as bnb
+        # optim = bnb.optim.AdamW8bit(self.model.model.embed_tokens.parameters(), lr=float(self.config['train_parameters']['lr']), betas=(0.9, 0.995))
+        
+        # # (optional) force embedding layers to use 32 bit for numerical stability
+        # # https://github.com/huggingface/transformers/issues/14819#issuecomment-1003445038
+        # for module in self.model.modules():
+        #     if isinstance(module, torch.nn.Embedding):
+        #         bnb.optim.GlobalOptimManager.get_instance().register_module_override(
+        #             module, "weight", {"optim_bits": 32}
+        
         return [optim], [scheduler_config] # multiple optim, multiple scheduler
 
 def load_model(config):
