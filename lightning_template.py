@@ -2,11 +2,12 @@ import lightning as L
 import torch
 import torch.nn as nn
 
-import wandb
-
 from torchmetrics.functional.classification.accuracy import accuracy
 
 import os
+from omegaconf import OmegaConf
+import argparse
+
 # from wandb.integration.lightning.fabric import WandbLogger
 # from lightning.fabric.loggers import CSVLogger, TensorBoardLogger
 
@@ -58,10 +59,49 @@ class TemplateLightningModule(L.LightningModule):
         }
         return [optim], [scheduler_config] # multiple optim, multiple scheduler
 
+def load_model(config):
+    model = torch.nn.Sequential(
+        torch.nn.Conv2d(
+            in_channels=1,
+            out_channels=16,
+            kernel_size=5,
+            stride=1,
+            padding=2,
+        ),
+        torch.nn.ReLU(),
+        torch.nn.MaxPool2d(kernel_size=2),
+        torch.nn.Conv2d(16, 32, 5, 1, 2),
+        torch.nn.ReLU(),
+        torch.nn.MaxPool2d(2),
+        torch.nn.Flatten(),
+        # fully connected layer, output 10 classes
+        torch.nn.Linear(32 * 7 * 7, 10),
+    )
+    
+    return model
 
+def load_dataloader(config):
+    # dataset and dataloader load
+    from torchvision.datasets import MNIST
+    from torchvision.transforms import ToTensor
+
+    train_set = MNIST(root="/tmp/data/MNIST", train=True, transform=ToTensor(), download=True)
+    val_set = MNIST(root="/tmp/data/MNIST", train=False, transform=ToTensor(), download=False)
+
+    train_loader = torch.utils.data.DataLoader(
+        train_set, batch_size=64, shuffle=True, pin_memory=torch.cuda.is_available(), num_workers=4
+    )
+    val_loader = torch.utils.data.DataLoader(
+        val_set, batch_size=64, shuffle=False, pin_memory=torch.cuda.is_available(), num_workers=4
+    )
+    
+    return train_loader, val_loader
     
 
 def train():
+    # group 기준으로 저장위치를 변경
+    # project->group->name
+    
     absolute_file_name = f"{CURRENT_TIME}-batchsize-{config['train_parameters']['batch_size']}-lr-{config['train_parameters']['lr']}-seed-{config['etc']['seed']}"
     save_root_path = f"./{config['trainer']['logger']['WandbLogger']['project']}/{config['trainer']['logger']['WandbLogger']['group']}/{config['trainer']['logger']['WandbLogger']['name']}/{absolute_file_name}"
     
@@ -107,42 +147,11 @@ def train():
                                                       **config['trainer']['logger']['TensorBoardLogger']
                                                       )
     
-    
-    model = torch.nn.Sequential(
-            torch.nn.Conv2d(
-                in_channels=1,
-                out_channels=16,
-                kernel_size=5,
-                stride=1,
-                padding=2,
-            ),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool2d(kernel_size=2),
-            torch.nn.Conv2d(16, 32, 5, 1, 2),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool2d(2),
-            torch.nn.Flatten(),
-            # fully connected layer, output 10 classes
-            torch.nn.Linear(32 * 7 * 7, 10),
-        )
-    
+    model = load_model(config)
     loss_fn = torch.nn.CrossEntropyLoss()
-    
     lit_model = TemplateLightningModule(config, model, loss_fn)
     
-    # dataset and dataloader load
-    from torchvision.datasets import MNIST
-    from torchvision.transforms import ToTensor
-
-    train_set = MNIST(root="/tmp/data/MNIST", train=True, transform=ToTensor(), download=True)
-    val_set = MNIST(root="/tmp/data/MNIST", train=False, transform=ToTensor(), download=False)
-
-    train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=64, shuffle=True, pin_memory=torch.cuda.is_available(), num_workers=4
-    )
-    val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=64, shuffle=False, pin_memory=torch.cuda.is_available(), num_workers=4
-    )
+    train_loader, val_loader = load_dataloader(config)
 
     # MPS backend currently does not support all operations used in this example.
     # If you want to use MPS, set accelerator='auto' and also set PYTORCH_ENABLE_MPS_FALLBACK=1
@@ -162,9 +171,17 @@ def train():
 if __name__ == "__main__":
     import yaml
     import datetime
-    with open('/Users/byeongjuncho/PythonProject/etc/template/lightning_template_config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
     
+    parser = argparse.ArgumentParser(description='PyTorch Lightning Template')
+    parser.add_argument('-c', '--config', default=None, type=str,
+                      help='config file path (default: None)')
+
+    args = parser.parse_args()
+    config_path = args.config
+    
+    # config = OmegaConf.load(config_path)
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
     
     CURRENT_TIME = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # 굿
     
