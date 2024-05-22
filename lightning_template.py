@@ -69,6 +69,10 @@ class TemplateLightningModule(L.LightningModule):
         
         return [optim], [scheduler_config] # multiple optim, multiple scheduler
 
+    # def on_save_checkpoint(self, checkpoint):
+    #     checkpoint["state_dict"]
+        
+        
 def load_model(config):
     model = torch.nn.Sequential(
         torch.nn.Conv2d(
@@ -108,7 +112,7 @@ def load_dataloader(config):
     return train_loader, val_loader
     
 
-def train():
+def train_with_lightning():
     # group 기준으로 저장위치를 변경
     # project->group->name
     
@@ -121,8 +125,21 @@ def train():
     
     
     os.makedirs(save_root_path, exist_ok=True)
+    
+    # customize modelcheckpoint
+    
+    # class CustomModelCheckpiont(L.pytorch.callbacks.ModelCheckpoint):
+    #     def _save_checkpoint(self, trainer, filepath):
+    #         super()._save_checkpoint(trainer, filepath)
+    
+    # checkpoint_callback = CustomModelCheckpiont(
+    #     filename='{epoch:05d}-{step}-{val_loss:.5f}-{val_acc:.3f}.model',
+    #     dirpath=save_root_path + f'/ckpt/', # checkpoint_path
+    #     **config['trainer']['callback']['ModelCheckpoint']
+    # )
+    
     checkpoint_callback = L.pytorch.callbacks.ModelCheckpoint(
-        filename='{epoch:05d}-{val_loss:.5f}-{val_acc:.3f}.model',
+        filename='{epoch:05d}-{step}-{val_loss:.5f}-{val_acc:.3f}.model',
         dirpath=save_root_path + f'/ckpt/', # checkpoint_path
         **config['trainer']['callback']['ModelCheckpoint']
     )
@@ -171,11 +188,49 @@ def train():
     
     trainer = L.pytorch.lightning.Trainer(
         callbacks=[checkpoint_callback, lr_callback],
+        # callbacks=[lr_callback],
         logger=[wandb_logger, tensorboard_logger],
         **config['trainer']['init']
     )
     
     trainer.fit(lit_model, train_loader, val_loader, **config['trainer']['fit'])
+    
+def train_with_fabric(config):
+    # group 기준으로 저장위치를 변경
+    # project->group->name
+    
+    absolute_file_name = f"{CURRENT_TIME}-batchsize-{config['train_parameters']['batch_size']}-lr-{config['train_parameters']['lr']}-seed-{config['etc']['seed']}"
+    save_root_path = f"./{config['trainer']['logger']['WandbLogger']['project']}/{config['trainer']['logger']['WandbLogger']['group']}/{config['trainer']['logger']['WandbLogger']['name']}/{absolute_file_name}"
+    
+    wandb_logger = L.pytorch.loggers.WandbLogger(
+    # name=f"{config['wandblogger']['name']}_{absolute_file_name}", 
+    save_dir=save_root_path,
+    config=config, 
+    **config['trainer']['logger']['WandbLogger']
+    )
+    
+    m = load_model(config)
+    loss_fn = nn.CrossEntropyLoss()
+    train_loader, val_loader = load_dataloader(config)
+    
+    Litmodel = TemplateLightningModule(config, m, loss_fn)
+    optimizers, schedulers = Litmodel.configure_optimizers()
+    # init fabric
+    config_trainer_init = config['trainer']['init']
+    fabric = L.Fabric( 
+        accelerator=config_trainer_init['accelerator'], 
+        strategy=config_trainer_init['strategy'], 
+        devices=config_trainer_init['devices'],
+        precision=config.trainer_init['precision'],
+        loggers=[wandb_logger],
+    )
+    
+    fabric.launch()
+    model, optimizers = fabric.setup(Litmodel, optimizers)
+    train_loader, val_loader = fabric.setup_dataloaders([train_loader, val_loader])
+    
+    
+    
     
 
 if __name__ == "__main__":
@@ -183,7 +238,7 @@ if __name__ == "__main__":
     import datetime
     
     parser = argparse.ArgumentParser(description='PyTorch Lightning Template')
-    parser.add_argument('-c', '--config', default=None, type=str,
+    parser.add_argument('-c', '--config', default="./lightning_template_config.yaml", type=str,
                       help='config file path (default: None)')
 
     args = parser.parse_args()
@@ -221,4 +276,4 @@ if __name__ == "__main__":
 
     # sweep_id=wandb.sweep(sweep_config, project="test_sweep")
     # wandb.agent(sweep_id=sweep_id, function=train, count=5) 
-    train()
+    train_with_lightning()
