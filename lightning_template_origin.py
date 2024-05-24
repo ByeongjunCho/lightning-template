@@ -6,56 +6,15 @@ import os
 from omegaconf import OmegaConf
 import argparse
 
-from model import MnistModel, MNISTLightningModule
-from base.base_callback import BaseLightningCallback
-from base.base_logger import BaseLightningLogger
-from base.data_loaders import BaseDataModule
+from data_loader.data_loaders import BaseDataModule
+from model.model import load_model, TemplateLightningModule
 
+# from wandb.integration.lightning.fabric import WandbLogger
+# from lightning.fabric.loggers import CSVLogger, TensorBoardLogger
 
-def main(config):
-    # model
-    model = MnistModel()
-    loss_fn = nn.CrossEntropyLoss()
-    litmodel = MNISTLightningModule(config, model, loss_fn=loss_fn)
-    
-    # dataloader
-    dm = BaseDataModule(config)
-    dm.prepare_data()
-    dm.setup('fit')
+#########
+# 
 
-    train_loader = dm.train_dataloader()
-    val_loader = dm.val_dataloader()
-    
-    # lightning logger
-    logger = BaseLightningLogger(config, CURRENT_TIME)
-    tensorboard_logger = logger.TensorBoardLogger()
-    wandb_logger = logger.WandbLogger()
-    
-    logger_list = [wandb_logger, tensorboard_logger]
-    ## wandb.watch
-    wandb_logger.watch(litmodel, **config['Logger']['wandblogger_watch'])
-    
-    
-    # lightning callback
-    callback = BaseLightningCallback(config, CURRENT_TIME)
-    # checkpoint_callback = callback.ModelCheckpoint()
-    # lr_callback = callback.LearningRateMonitor()
-    # earlystop_callback = callback.EarlyStopping()
-    
-    callback_list = [
-        callback.ModelCheckpoint(), 
-        callback.LearningRateMonitor(), 
-        callback.EarlyStopping()
-        ]
-    
-    trainer = L.pytorch.lightning.Trainer(
-        callbacks=callback_list,
-        logger=logger_list,
-        **config['Trainer']['init']
-    )
-    
-    # 학습
-    trainer.fit(litmodel, train_loader, val_loader, **config['Trainer']['fit'])
 
 
 def train_with_lightning():
@@ -203,7 +162,16 @@ if __name__ == "__main__":
     
     CURRENT_TIME = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # 굿
     
-    
+    # resume 확인
+    if config['path']['resume'] is not None:
+        assert os.path.exists(config['path']['resume'])
+        # ckpt path
+        config['trainer']['fit']['ckpt_path'] = os.path.join(config['path']['resume'], 'ckpt', 'last.ckpt')
+        # wandb resume
+        config['trainer']['logger']['WandbLogger']['resume'] = 'must'
+        # wandb id
+        config['trainer']['logger']['WandbLogger']['id'] = [x for x in os.listdir(os.path.join(config['path']['resume'], 'wandb')) if 'run-' in x][0].split('-')[-1]
+
     # sweep_config = {
     #     'method': 'random',
     #     'name': 'first_sweep',
@@ -220,4 +188,4 @@ if __name__ == "__main__":
 
     # sweep_id=wandb.sweep(sweep_config, project="test_sweep")
     # wandb.agent(sweep_id=sweep_id, function=train, count=5) 
-    main(config)
+    train_with_lightning()

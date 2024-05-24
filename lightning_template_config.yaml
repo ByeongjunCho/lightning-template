@@ -1,52 +1,74 @@
 # lightning module template configuration
 
-path:
-  save_path: ./ckpt
-  # resume: /Users/byeongjuncho/PythonProject/etc/template/dummy/None/dummy/2024-04-12-18-49-47-batchsize-16-lr-1e-4-seed-42
-  resume: null
+LightningDataModule:
+  train:
+    src_path: /tmp/data/MNIST
+    batch_size: 16
+    num_workers: 4
+    shuffle: true
+  val: 
+    src_path: /tmp/data/MNIST
+    batch_size: 16
+    num_workers: 4
+    shuffle: false
+  test:
+    src_path: /tmp/data/MNIST
+    batch_size: 16
+    num_workers: 4
+    shuffle: false
+
+LightningModule:
+  configure_optimizers:
+    learning_rate: 1e-4
+
+
+# path:
+#   save_path: ./ckpt
+#   # resume: /Users/byeongjuncho/PythonProject/etc/template/dummy/None/dummy/2024-04-12-18-49-47-batchsize-16-lr-1e-4-seed-42
+#   resume: null
 
 train_parameters:  
   batch_size: 16
   lr: 1e-4
   class_num: 10
 
-trainer:
-  callback:
-    ModelCheckpoint:
-      save_top_k: -1
-      save_last: True
-      save_weights_only: False
-      every_n_epochs: 1
+Logger:
+  WandbLogger:
+    project: dummy
+    name: dummy
+    version: null
+    log_model: False
+    group: null
+    resume: null       # must if you resume
+    id: null         # if resume is not None, id is same as wandb 
 
-    LearningRateMonitor:
-      logging_interval: step
-      log_momentum: True
+  TensorBoardLogger:
+    log_graph: True
+
+  wandblogger_watch:
+    log: all
+    log_freq: 100
+    log_graph: False
+
+Callback:
+  ModelCheckpoint:
+    save_top_k: -1
+    save_last: true
+    save_weights_only: true
+    every_n_epochs: 1
+
+  LearningRateMonitor:
+    logging_interval: step
+    log_momentum: True
   
-    EarlyStopping:
-      monitor: 'val_loss'
-      min_delta: 0
-      patience: 20
-      verbose: False
-      mode: 'min'
+  EarlyStopping:
+    monitor: 'val_loss'
+    min_delta: 0
+    patience: 20
+    verbose: False
+    mode: 'min'
 
-  logger:
-    WandbLogger:
-      project: dummy
-      name: dummy
-      version: null
-      log_model: False
-      group: null
-      resume: null       # must if you resume
-      id: null         # if resume is not None, id is same as wandb 
-
-    TensorBoardLogger:
-      log_graph: True
-
-    wandblogger_watch:
-      log: all
-      log_freq: 100
-      log_graph: False
-
+Trainer:
   init:
     accelerator: mps # cpu, gpu, tpu, mps, ...
     accumulate_grad_batches: 1
@@ -63,14 +85,14 @@ trainer:
     max_steps: -1 # stop step
     num_nodes: 1
     num_sanity_val_steps: 2 # 학습 전 validation step 을 얼마나 실행할지 선택(batch)
-    precision: 16-mixed # 32-true, 32, 16-mixed, bf16-mixed, ...
+    precision: 32-true # 32-true, 32, 16-mixed, bf16-mixed, ...
     profiler: null # 실행 시 내부를 profile로 보여줌. "simple", "advanced", ...
     val_check_interval: 0.2 # validation 을 어어느 주기로 수행할 것인지 여부. [0.0, 1.0] = training epcoh %, int=batch
     strategy: auto # null, ddp, fsdp, ...
-    detect_anomaly: true
+    detect_anomaly: true # 이상 파악. true 설정 시 느림
   
   fit:
-    ckpt_path: null
+    ckpt_path: null # .last 형태
 
 etc:
   seed: 42
