@@ -53,17 +53,17 @@ class MNISTLightningModule(BaseLightningModel):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=float(self.config_lightningmodule['configure_optimizers']['learning_rate']))
 
-        total_steps = self.trainer.estimated_stepping_batches
-        scheduler_config = {
-            "scheduler": transformers.get_cosine_schedule_with_warmup(
-                optimizer, 
-                num_warmup_steps=total_steps//4, 
-                num_training_steps=total_steps
-                ),
-            "monitor": "val_acc",
-            "interval": "step",
-            "frequency": 1,
-        }
+        # total_steps = self.trainer.estimated_stepping_batches
+        # scheduler_config = {
+        #     "scheduler": transformers.get_cosine_schedule_with_warmup(
+        #         optimizer, 
+        #         num_warmup_steps=total_steps//4, 
+        #         num_training_steps=total_steps
+        #         ),
+        #     "monitor": "val_acc",
+        #     "interval": "step",
+        #     "frequency": 1,
+        # }
         
         # AdamW8bit example
         # import bitsandbytes as bnb
@@ -76,7 +76,7 @@ class MNISTLightningModule(BaseLightningModel):
         #         bnb.optim.GlobalOptimManager.get_instance().register_module_override(
         #             module, "weight", {"optim_bits": 32}
         
-        return [optimizer], [scheduler_config] # multiple optim, multiple scheduler
+        return [optimizer] # multiple optim, multiple scheduler
 
 
     ### checkpoint 변형 - 아래 함수는 hook 중 저장하는 과정에서 실행되며, 여기서 state_dict 를 컨트롤할 수 있음

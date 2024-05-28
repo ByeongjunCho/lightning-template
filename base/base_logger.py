@@ -20,12 +20,12 @@ class BaseLightningLogger():
         
         # resume : 학습을 이어서 진행하는 경우 연속성을 위해 수정
         resume_path = config['Trainer']['fit']['ckpt_path']
-        if config['Trainer']['fit']['ckpt_path'] is not None:
+        if resume_path is not None:
             assert resume_path # 파일 있는지 확인
             # wandb resume
             config['Logger']['WandbLogger']['resume'] = 'must'
             # wandb id
-            config['Logger']['WandbLogger']['id'] = [x for x in os.listdir(os.path.join('/'.join(resume_path.split('/')[:-2]), 'wandb')) if 'run-' in x][0].split('-')[-1]
+            config['Logger']['WandbLogger']['id'] = [x for x in os.listdir(os.path.join('/'.join(resume_path.split('/')[:-2]), 'wandb', 'latest-run')) if 'run-' in x][0].split('-')[-1].replace('.wandb', '')
             # 기존 저장 위치로 변경
             absolute_file_name = resume_path.split('/')[-3]
             self.save_root_path = '/'.join(resume_path.split('/')[:-2])
