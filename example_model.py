@@ -37,7 +37,7 @@ class MNISTLightningModule(BaseLightningModel):
 
         loss, acc = self.calculate_matric(logits, y)
         
-        self.log_dict({'train_loss': loss, 'train_acc': acc, 'epoch': self.current_epoch}, sync_dist=True, prog_bar=True)
+        self.log_dict({'train_loss': loss, 'train_acc': acc, 'epoch': self.current_epoch}, sync_dist=True, prog_bar=True, on_epoch=True, on_step=True)
         
         return {"loss": loss, "accuracy": acc}
     
