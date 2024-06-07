@@ -5,7 +5,7 @@ LightningDataModule:
     src_path: /tmp/data/MNIST
     batch_size: 16
     num_workers: 4
-    shuffle: true
+    shuffle: false
   val: 
     src_path: /tmp/data/MNIST
     batch_size: 16
@@ -72,6 +72,8 @@ Trainer:
   init:
     accelerator: mps # cpu, gpu, tpu, mps, ...
     accumulate_grad_batches: 1
+    gradient_clip_val : 1.0 # same as huggingface trainer
+    gradient_clip_algorithm : norm # same as huggingface trainer 
     check_val_every_n_epoch: 1 # train 몇번 끝나고 validation 할지 주기
     devices: [0]
     # enable_checkpointing: True # 마지막 checkpoint 를 언제나 저장함
@@ -81,7 +83,7 @@ Trainer:
     limit_test_batches: 0.2
     limit_val_batches: 0.2
     log_every_n_steps: 50 # logging 주기(step)
-    max_epochs: 5 # stop epoch 
+    max_epochs: 100 # stop epoch 
     max_steps: -1 # stop step
     num_nodes: 1
     num_sanity_val_steps: 2 # 학습 전 validation step 을 얼마나 실행할지 선택(batch)

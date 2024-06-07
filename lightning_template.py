@@ -54,7 +54,7 @@ def main(config):
     callback_list = [
         callback.ModelCheckpoint(), 
         callback.LearningRateMonitor(), 
-        callback.EarlyStopping()
+        # callback.EarlyStopping()
         ]
     
     trainer = L.pytorch.lightning.Trainer(
