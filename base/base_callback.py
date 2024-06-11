@@ -46,10 +46,12 @@ class BaseLightningCallback():
         
     def EarlyStopping(self):
         return L.pytorch.callbacks.EarlyStopping(
-        **self.callback_config['EarlyStopping']
+            **self.callback_config['EarlyStopping']
         # monitor='val_loss',
         # min_delta=0,
         # patience=20,
         # verbose=False,
         # mode='min'
         )
+        
+    # 필요한 callback 추가

@@ -1,6 +1,7 @@
 """
 Fabric template 목적
 최대한 pytorch lightning 과 비슷하게 동작할 수 있도록 수정
+6월 11일 : 잠시 보류
 """
 import lightning as L
 import torch

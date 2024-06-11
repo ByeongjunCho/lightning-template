@@ -47,3 +47,5 @@ class BaseLightningLogger():
             save_dir=self.save_root_path + "/tb_logs",
             **self.logger_config['TensorBoardLogger']
             )
+        
+    # 필요한 logger 추가
